@@ -4,58 +4,154 @@ using UnityEngine;
 
 public class CharacterControllerScript : MonoBehaviour
 {
-	public float speed = 25.0F;
-	public float airSpeed;
-	public float jumpSpeed = 20.0F;
-	public float gravity = 80.0F;
-	public int maxJumps = 2;
-	private int nrOfJumps;
-	private Vector2 moveDirection = Vector2.zero;
+    private float horizontal;
+    private float speed = 20f;
+    private float jumpingPower = 30f;
+    private bool isFacingRight = true;
 
-	// Use this for initialization
-	void Start()
-	{
-		airSpeed = speed / 2;
-		nrOfJumps = 0;
-	}
+    private bool isWallSliding;
+    private float wallSlidingSpeed = 3f;
 
-	// Update is called once per frame
-	void Update()
-	{
-		CharacterController controller = GetComponent<CharacterController>();
+    private bool isWallJumping;
+    private float wallJumpingDirection;
+    private float wallJumpingTime = 0.2f;
+    private float wallJumpingCounter;
+    private float WallJumpingDuration = 0.4f;
+    private Vector3 wallJumpingPower = new Vector3(12f, 20f);
 
-		// is the controller on the ground?
-		if (controller.isGrounded)
-		{
-			nrOfJumps = 0;
-			//Feed moveDirection with input.
-			moveDirection = new Vector2(Input.GetAxis("Horizontal"), 0);
-			moveDirection = transform.TransformDirection(moveDirection);
-			//Multiply it by speed.
-			moveDirection *= speed;
-			//Jumping
-			if (Input.GetButtonDown("Jump"))
-            {
-				Jump();
-			}
-		} else
-        {
-			moveDirection.x = Input.GetAxis("Horizontal") * speed;
+    [SerializeField] private Rigidbody rb;
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private Transform wallCheck;
+    [SerializeField] private LayerMask wallLayer;
 
-			if (Input.GetButtonDown("Jump") && nrOfJumps < maxJumps)
-			{
-				Jump();
-			}
-		}
-		//Applying gravity to the controller
-		moveDirection.y -= gravity * Time.deltaTime;
-		//Making the character move
-		controller.Move(moveDirection * Time.deltaTime);
-	}
+    private float gravityScale = 4f;
+    public static float globalGravity = -9.81f;
 
-	void Jump()
+    private int maxJumps = 2;
+    private int jumpCount = 0;
+
+    private void Start()
     {
-		moveDirection.y = jumpSpeed;
-		nrOfJumps++;
-	}
+        rb.useGravity = false;
+    }
+
+    private void Update()
+    {
+        horizontal = Input.GetAxisRaw("Horizontal");
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            if (IsGrounded())
+            {
+                jumpCount = 0;
+                rb.velocity = new Vector3(rb.velocity.x, jumpingPower, 0);
+                jumpCount++;
+            } else
+            {
+                if(jumpCount < maxJumps)
+                {
+                    rb.velocity = new Vector3(rb.velocity.x, jumpingPower, 0);
+                    jumpCount++;
+                }
+            }
+        }
+
+        if(Input.GetButtonDown("Jump") && rb.velocity.y > 0f)
+        {
+            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 0.5f, 0);
+        }
+
+        WallSlide();
+        WallJump();
+
+        if (!isWallJumping)
+        {
+            Flip();
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if(!isWallJumping)
+        {
+            rb.velocity = new Vector3(horizontal * speed, rb.velocity.y, 0f);
+        }
+
+        if (!isWallSliding)
+        {
+            Vector3 gravity = globalGravity * gravityScale * Vector3.up;
+            rb.AddForce(gravity, ForceMode.Acceleration);
+        }
+    }
+
+    private bool IsGrounded()
+    {
+        return Physics.CheckSphere(groundCheck.position, 0.2f, groundLayer);
+    }
+
+    private bool IsWalled()
+    {
+        return Physics.CheckSphere(wallCheck.position, 0.2f, wallLayer);
+    }
+
+    private void WallSlide()
+    {
+        if(IsWalled() && !IsGrounded() && horizontal != 0f)
+        {
+            isWallSliding = true;
+            rb.velocity = new Vector3(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlidingSpeed, -1), 0f);
+        } else
+        {
+            isWallSliding = false;
+        }
+    }
+
+    private void WallJump()
+    {
+        if(isWallSliding)
+        {
+            isWallJumping = false;
+            wallJumpingDirection = -transform.localScale.x;
+            wallJumpingCounter = wallJumpingTime;
+
+            CancelInvoke(nameof(StopWallJumping));
+        } else
+        {
+            wallJumpingCounter -= Time.deltaTime;
+        }
+
+        if(Input.GetButtonDown("Jump") && wallJumpingCounter > 0f)
+        {
+            isWallJumping = true;
+            rb.velocity = new Vector3(wallJumpingDirection * wallJumpingPower.x, wallJumpingPower.y);
+            wallJumpingCounter = 0f;
+
+            if(transform.localScale.x != wallJumpingDirection)
+            {
+                isFacingRight = !isFacingRight;
+                Vector3 localScale = transform.localScale;
+                localScale.x *= -1f;
+                transform.localScale = localScale;
+            }
+
+            Invoke(nameof(StopWallJumping), WallJumpingDuration);
+        }
+    }
+
+    private void StopWallJumping()
+    {
+        isWallJumping = false;
+    }
+
+    private void Flip()
+    {
+        if(isFacingRight && horizontal < 0f || !isFacingRight && horizontal > 0f)
+        {
+            isFacingRight = !isFacingRight;
+            Vector3 localScale = transform.localScale;
+            localScale.x *= -1f;
+            transform.localScale = localScale;
+        }
+    }
 }

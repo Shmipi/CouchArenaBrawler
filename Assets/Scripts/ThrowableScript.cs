@@ -53,12 +53,13 @@ public class ThrowableScript : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezePositionZ;
         rb.constraints = RigidbodyConstraints.FreezeRotationX;
         rb.constraints = RigidbodyConstraints.FreezeRotationY;
-        rb.excludeLayers = playerLayer;
+        rb.includeLayers = playerLayer;
 
+        transform.rotation = new Quaternion(0, 0, 0, 0);
         transform.position = new Vector3(transform.position.x + 1, transform.position.y + 1, 0);
 
         Vector3 hurl = 1 * gameObject.transform.right;
-        rb.AddForce(5, 0, 0);
+        rb.AddForce(hurl, ForceMode.Force);
     }
 
     private void OnTriggerEnter(Collider other)

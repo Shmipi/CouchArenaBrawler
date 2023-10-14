@@ -5,11 +5,13 @@ TagManager:
   serializedVersion: 2
   tags:
   - floor
+  - Throwable
+  - wall
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player
   - Water
   - UI
   - Ground

@@ -31,9 +31,16 @@ public class CharacterControllerScript : MonoBehaviour
     private int maxJumps = 2;
     private int jumpCount = 0;
 
+    public Transform handTransform;
+
+    private ThrowableScript throwable;
+    private bool canPickUp;
+    private bool holdingWeapon;
+
     private void Start()
     {
         rb.useGravity = false;
+        canPickUp = false;
     }
 
     private void Update()
@@ -69,6 +76,19 @@ public class CharacterControllerScript : MonoBehaviour
         {
             Flip();
         }
+
+        if (Input.GetKeyDown(KeyCode.E) && canPickUp)
+        {
+            PickUp();
+        }
+
+        if (holdingWeapon && Input.GetKeyDown(KeyCode.K))
+        {
+            throwable.ThrowWeapon(transform);
+            throwable = null;
+            holdingWeapon = false;
+        }
+
     }
 
     private void FixedUpdate()
@@ -153,5 +173,31 @@ public class CharacterControllerScript : MonoBehaviour
             localScale.x *= -1f;
             transform.localScale = localScale;
         }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.tag == "Throwable")
+        {
+            Debug.Log("Time to pick up!");
+            canPickUp = true;
+            throwable = other.GetComponent<ThrowableScript>();
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "Throwable")
+        {
+            Debug.Log("Leaving throwable!");
+            canPickUp = false;
+        }
+    }
+
+    private void PickUp()
+    {
+        Debug.Log("Picked up!");
+        holdingWeapon = true;
+        throwable.PickUp(handTransform);
     }
 }
